@@ -33,8 +33,10 @@ Gemini Notebook（NotebookLM等）に格納された特定のファイル（ま�
   - `SKILL.md`: トリガー条件、誠実さの原則とIssue追加確認ルール、既存 `grilling` スキルの呼び出しと双方向モード連携、アナロジー適合度判定＆ファクトチェックの出力契約を定義。
   - `references/notebook-access.md`: ノートブック（URL/名前）と指定ファイル群を取得・確認するマルチ経路手順（MCP/CLI → ブラウザ操作 `/browser` → ローカルファイル・エクスポート確認の優先順位とフォールバック）。
   - `references/analogy-rubric.md`: 別のアナロジーの適合度を厳密に評価する4軸ルーブリック、文献・URL・Web記事を用いたファクトチェック手順、引用箇所の記載規則、およびミス判明時のIssue登録確認フロー。
+  - `scripts/notebook_client.py`: プライベートNotebookLM URL / ノートブック名から認証確認（`status`）、ヘッドレス自動リフレッシュ（`nlm auth refresh`）、ソース一覧取得（`list-sources`）、および生テキスト全文取得（`fetch-source`、SHA-256ダイジェスト付き、読み取り専用）を行うクライアント。
   - `scripts/install.sh`: Mac内の全対象エージェント環境へスキルをインストール・更新し、インストール後の整合性チェックを行うスクリプト。
-  - `VERSION`: スキルバージョン管理ファイル（初期リリース `0.1.0`）。
+  - `LICENSE`: MIT License（連携先の `mattpocock/skills` の `grilling` スキルおよび `jacob-bd/gemini-notebook-mcp-cli` のMITライセンスと完全互換、Third-Party Noticesを併記）。
+  - `VERSION`: スキルバージョン管理ファイル（`0.2.0`）。
 
 ## 5. 仕様詳細（How it works）
 

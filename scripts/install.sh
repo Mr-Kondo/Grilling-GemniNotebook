@@ -21,6 +21,18 @@ GRILLING_LINKS=(
   "${HOME}/.codex/skills/grilling"
 )
 
+SKILL_REL_FILES=(
+  "SKILL.md"
+  "VERSION"
+  "LICENSE"
+  "README.md"
+  "references/notebook-access.md"
+  "references/analogy-rubric.md"
+  "scripts/notebook_client.py"
+  "scripts/verify_skill.py"
+  "scripts/install.sh"
+)
+
 if [[ "${1:-}" == "--version" ]]; then
   echo "${SKILL_NAME} ${VERSION}"
   exit 0
@@ -29,7 +41,7 @@ fi
 verify_install() {
   local status=0
   for target in "${TARGET_DIRS[@]}"; do
-    for rel in "SKILL.md" "VERSION" "references/notebook-access.md" "references/analogy-rubric.md" "scripts/verify_skill.py" "scripts/install.sh"; do
+    for rel in "${SKILL_REL_FILES[@]}"; do
       local src_file="${ROOT}/${rel}"
       local dst_file="${target}/${rel}"
       if [[ ! -f "${dst_file}" ]]; then
@@ -54,8 +66,12 @@ verify_install() {
       fi
     done
   fi
+  if ! command -v nlm >/dev/null 2>&1 && [[ ! -x "${HOME}/.local/bin/nlm" ]]; then
+    echo "[FAIL] nlm (notebooklm-mcp-cli) is not installed on this Mac" >&2
+    status=1
+  fi
   if [[ "${status}" -eq 0 ]]; then
-    echo "[PASS] ${SKILL_NAME} v${VERSION} verified across all ${#TARGET_DIRS[@]} Mac agent directories (plus grilling prerequisite links)."
+    echo "[PASS] ${SKILL_NAME} v${VERSION} verified across all ${#TARGET_DIRS[@]} Mac agent directories (plus grilling prerequisite links & nlm CLI)."
   fi
   return "${status}"
 }
@@ -76,10 +92,10 @@ for target in "${TARGET_DIRS[@]}"; do
     rm -rf "${target}"
   fi
   mkdir -p "${target}/references" "${target}/scripts"
-  cp "${ROOT}/SKILL.md" "${ROOT}/VERSION" "${ROOT}/README.md" "${target}/"
+  cp "${ROOT}/SKILL.md" "${ROOT}/VERSION" "${ROOT}/LICENSE" "${ROOT}/README.md" "${target}/"
   cp "${ROOT}/references/notebook-access.md" "${ROOT}/references/analogy-rubric.md" "${target}/references/"
-  cp "${ROOT}/scripts/verify_skill.py" "${ROOT}/scripts/install.sh" "${target}/scripts/"
-  chmod +x "${target}/scripts/verify_skill.py" "${target}/scripts/install.sh"
+  cp "${ROOT}/scripts/notebook_client.py" "${ROOT}/scripts/verify_skill.py" "${ROOT}/scripts/install.sh" "${target}/scripts/"
+  chmod +x "${target}/scripts/notebook_client.py" "${target}/scripts/verify_skill.py" "${target}/scripts/install.sh"
 done
 
 if [[ -d "${HOME}/.agents/skills/grilling" ]]; then
