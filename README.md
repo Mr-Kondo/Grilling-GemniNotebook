@@ -41,6 +41,8 @@ python3 scripts/verify_skill.py --check-live-auth
 
 更新作業ではソースリポジトリの `references/update-workflow.md` を使います。詳しい決定は[ADR](https://github.com/Mr-Kondo/Grilling-GemniNotebook/blob/main/adr/2026-11-03-update-knowledge-layers.md)を参照してください。索引・ADR・検証記録はインストールされません。
 
+必要な場合はソースの[知識索引](https://github.com/Mr-Kondo/Grilling-GemniNotebook/blob/main/knowledge/index.md)から原資料へ進めます。現時点では「配置の復旧」「検証から主張できる範囲」の2件に限定します。索引だけで判断せず、現在のコード・対象版・反例を確認してください。探索や提案の品質向上効果は未検証です。
+
 開発用の検証は `python3 -m unittest discover -s tests -v` と `python3 scripts/verify_skill.py`。インストーラーのテストは隔離したHOMEで実行し、実際のユーザー配置を変更しません。
 
 ## ライセンス（License）
