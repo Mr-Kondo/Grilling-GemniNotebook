@@ -61,3 +61,13 @@ class EvaluationTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     evaluation.run(path)
                 model.assert_not_called()
+
+    def test_changed_corpus_stops_before_any_model_call(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "pilot"
+            evaluation.prepare(path)
+            (path / "corpus.json").write_text('{}')
+            with patch.object(evaluation.subprocess, "run") as model:
+                with self.assertRaisesRegex(ValueError, "Corpus changed"):
+                    evaluation.run(path)
+                model.assert_not_called()
