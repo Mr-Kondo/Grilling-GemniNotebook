@@ -26,9 +26,22 @@ Gemini Notebook（NotebookLM等）内の指定ファイル（またはファイ�
 
 ```bash
 bash scripts/install.sh
+bash scripts/install.sh --update
 bash scripts/install.sh --verify
 python3 scripts/verify_skill.py --check-live-auth
 ```
+
+`--install`（省略時も同じ）と `--update` は同じ配布処理です。既存配置を退避してから交換し、失敗した配置は復旧します。退避先は `~/.local/state/grilling-gemini-notebook/backups/` に表示されます。独自変更のあるバックアップは保持し、不要と確認したものだけ削除してください。
+
+アンインストールは `bash scripts/install.sh --uninstall`。このスキルの配置だけを退避して撤去し、前提のgrillingやnlmは残します。
+
+## 更新管理（WikiSkillの考え方を限定採用）
+
+目的は、実行の記録と判断の根拠を残し、検証済みの手順だけをスキルに反映することです。`feedback/` に非公開の実行・検証結果、`knowledge/` に原資料への少数索引、`SKILL.md` と実行用参照に配布する手順を分けます。索引は通常利用では読み込みません。自動更新の有効性は未検証です。
+
+更新作業ではソースリポジトリの `references/update-workflow.md` を使います。詳しい決定は[ADR](https://github.com/Mr-Kondo/Grilling-GemniNotebook/blob/main/adr/2026-11-03-update-knowledge-layers.md)を参照してください。索引・ADR・検証記録はインストールされません。
+
+開発用の検証は `python3 -m unittest discover -s tests -v` と `python3 scripts/verify_skill.py`。インストーラーのテストは隔離したHOMEで実行し、実際のユーザー配置を変更しません。
 
 ## ライセンス（License）
 

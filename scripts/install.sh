@@ -4,8 +4,17 @@ set -euo pipefail
 SKILL_NAME="grilling-gemini-notebook"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="$(tr -d '[:space:]' < "${ROOT}/VERSION")"
-TIMESTAMP="$(date +%Y%m%d%H%M%S)"
-BACKUP_ROOT="${ROOT}/feedback/backups/${TIMESTAMP}"
+TIMESTAMP="$(date +%Y%m%d%H%M%S)-$$"
+BACKUP_ROOT="${HOME}/.local/state/${SKILL_NAME}/backups/${TIMESTAMP}"
+MODE="${1:---install}"
+case "${MODE}" in
+  --install|--update|--uninstall|--verify|--version) ;;
+  *) echo "Usage: $0 [--install|--update|--uninstall|--verify|--version]" >&2; exit 2 ;;
+esac
+if [[ "$#" -gt 1 ]]; then
+  echo "Only one operation is supported" >&2
+  exit 2
+fi
 
 TARGET_DIRS=(
   "${HOME}/.agents/skills/${SKILL_NAME}"
@@ -33,7 +42,7 @@ SKILL_REL_FILES=(
   "scripts/install.sh"
 )
 
-if [[ "${1:-}" == "--version" ]]; then
+if [[ "${MODE}" == "--version" ]]; then
   echo "${SKILL_NAME} ${VERSION}"
   exit 0
 fi
@@ -76,26 +85,66 @@ verify_install() {
   return "${status}"
 }
 
-if [[ "${1:-}" == "--verify" ]]; then
+if [[ "${MODE}" == "--verify" ]]; then
   verify_install
   exit $?
 fi
 
+# ADR: adr/2026-11-03-update-knowledge-layers.md. Never replace an unrelated skill.
+for target in "${TARGET_DIRS[@]}"; do
+  if [[ -e "${target}" || -L "${target}" ]]; then
+    if [[ ! -f "${target}/SKILL.md" ]] || ! grep -Fxq "name: ${SKILL_NAME}" "${target}/SKILL.md"; then
+      echo "[FAIL] Refusing to replace unrecognized skill: ${target}" >&2
+      exit 1
+    fi
+  fi
+done
+
+backup_target() {
+  local target="$1"
+  local backup="${BACKUP_ROOT}/$(echo "${target}" | tr '/' '_')"
+  mkdir -p "${BACKUP_ROOT}"
+  mv "${target}" "${backup}"
+  echo "[BACKUP] ${backup}"
+}
+
+if [[ "${MODE}" == "--uninstall" ]]; then
+  for target in "${TARGET_DIRS[@]}"; do
+    if [[ -e "${target}" || -L "${target}" ]]; then
+      backup_target "${target}"
+    fi
+  done
+  echo "[PASS] Skill removed; backups retained. grilling and nlm were not removed."
+  exit 0
+fi
+
 python3 "${ROOT}/scripts/verify_skill.py"
+for rel in "${SKILL_REL_FILES[@]}"; do
+  [[ -f "${ROOT}/${rel}" ]] || { echo "[FAIL] Missing source: ${rel}" >&2; exit 1; }
+done
+
+STAGE=""
+trap 'if [[ -n "${STAGE}" && -d "${STAGE}" ]]; then rm -rf "${STAGE}"; fi' EXIT
 
 for target in "${TARGET_DIRS[@]}"; do
   mkdir -p "$(dirname "${target}")"
+  STAGE="$(mktemp -d "${target}.stage.XXXXXX")"
+  for rel in "${SKILL_REL_FILES[@]}"; do
+    mkdir -p "$(dirname "${STAGE}/${rel}")"
+    cp "${ROOT}/${rel}" "${STAGE}/${rel}"
+  done
+  chmod +x "${STAGE}/scripts/"*.py "${STAGE}/scripts/install.sh"
+  backup="${BACKUP_ROOT}/$(echo "${target}" | tr '/' '_')"
   if [[ -e "${target}" || -L "${target}" ]]; then
-    mkdir -p "${BACKUP_ROOT}"
-    local_name="$(echo "${target}" | tr '/' '_')"
-    cp -RL "${target}" "${BACKUP_ROOT}/${local_name}" 2>/dev/null || true
-    rm -rf "${target}"
+    backup_target "${target}"
   fi
-  mkdir -p "${target}/references" "${target}/scripts"
-  cp "${ROOT}/SKILL.md" "${ROOT}/VERSION" "${ROOT}/LICENSE" "${ROOT}/README.md" "${target}/"
-  cp "${ROOT}/references/notebook-access.md" "${ROOT}/references/analogy-rubric.md" "${target}/references/"
-  cp "${ROOT}/scripts/notebook_client.py" "${ROOT}/scripts/verify_skill.py" "${ROOT}/scripts/install.sh" "${target}/scripts/"
-  chmod +x "${target}/scripts/notebook_client.py" "${target}/scripts/verify_skill.py" "${target}/scripts/install.sh"
+  if ! mv "${STAGE}" "${target}"; then
+    if [[ -e "${backup}" || -L "${backup}" ]]; then
+      mv "${backup}" "${target}"
+    fi
+    exit 1
+  fi
+  STAGE=""
 done
 
 if [[ -d "${HOME}/.agents/skills/grilling" ]]; then
