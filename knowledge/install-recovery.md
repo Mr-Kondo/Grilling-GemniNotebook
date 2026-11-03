@@ -4,6 +4,7 @@
 
 - v0.3.0の配布処理。原資料は [install.sh](../scripts/install.sh) の `backup_target`・`cleanup` と [隔離テスト](../tests/test_install.py) の `test_later_swap_failure_rolls_back_all_targets`。
 - 決定は [三層分離ADR](../adr/2026-11-03-update-knowledge-layers.md) と [PR #5](https://github.com/Mr-Kondo/Grilling-GemniNotebook/pull/5)。
+- 所有権の根拠は同スクリプトのfrontmatter検査と同テストの `test_refuses_foreign_skill_on_update_and_uninstall`・`test_body_name_is_not_ownership`。v0.3.1でもこの配布処理は変更しない。
 
 ## 適用条件
 

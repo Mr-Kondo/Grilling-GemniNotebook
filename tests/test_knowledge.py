@@ -10,7 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class KnowledgeLinksTests(unittest.TestCase):
     def test_local_evidence_links_exist_and_stay_in_public_source(self):
-        for page in (ROOT / "knowledge").glob("*.md"):
+        pages = list((ROOT / "knowledge").glob("*.md"))
+        self.assertTrue(pages, "Knowledge source directory is missing or empty")
+        for page in pages:
             for link in re.findall(r"\]\(([^)]+)\)", page.read_text(encoding="utf-8")):
                 if link.startswith(("https://", "http://")):
                     continue
@@ -20,7 +22,10 @@ class KnowledgeLinksTests(unittest.TestCase):
                 self.assertTrue(target.is_file(), (page, link))
 
     def test_runtime_skill_does_not_load_development_knowledge(self):
-        self.assertNotIn("knowledge/", (ROOT / "SKILL.md").read_text(encoding="utf-8"))
+        for path in ("SKILL.md", "references/notebook-access.md", "references/analogy-rubric.md"):
+            text = (ROOT / path).read_text(encoding="utf-8")
+            for token in ("knowledge/", "update-workflow.md", "adr/"):
+                self.assertNotIn(token, text, path)
 
 
 if __name__ == "__main__":
