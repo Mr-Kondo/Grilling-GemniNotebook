@@ -41,7 +41,9 @@ python3 scripts/verify_skill.py --check-live-auth
 
 更新作業ではソースリポジトリの `references/update-workflow.md` を使います。詳しい決定は[ADR](https://github.com/Mr-Kondo/Grilling-GemniNotebook/blob/main/adr/2026-11-03-update-knowledge-layers.md)を参照してください。索引・ADR・検証記録はインストールされません。
 
-必要な場合はソースの[知識索引](https://github.com/Mr-Kondo/Grilling-GemniNotebook/blob/main/knowledge/index.md)から原資料へ進めます。現時点では「配置の復旧」「検証から主張できる範囲」の2件に限定します。索引だけで判断せず、現在のコード・対象版・反例を確認してください。探索や提案の品質向上効果は未検証です。
+必要な場合はソースの[知識索引](https://github.com/Mr-Kondo/Grilling-GemniNotebook/blob/main/knowledge/index.md)から原資料へ進めます。現時点では「配置の復旧」「検証から主張できる範囲」の2件に限定します。索引だけで判断せず、現在のコード・対象版・反例を確認してください。
+
+索引あり／なしの[限定比較](https://github.com/Mr-Kondo/Grilling-GemniNotebook/blob/main/adr/2026-11-03-index-comparison.md)では、原資料全文を与えた4課題各1回で、意味基準と原資料引用は両条件4/4でした。改善の証拠は得られず、任意索引のまま維持します。実検索・実際の更新提案・三環境の回答品質への効果は未確認です。自動更新には接続しません。ソース専用の `scripts/evaluate_knowledge.py` に再現手順を用意し、生データは非公開のfeedbackだけに保存します。
 
 開発用の検証は `python3 -m unittest discover -s tests -v` と `python3 scripts/verify_skill.py`。インストーラーのテストは隔離したHOMEで実行し、実際のユーザー配置を変更しません。
 
