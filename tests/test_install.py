@@ -20,6 +20,9 @@ class InstallTests(unittest.TestCase):
         self.repo = self.home / "repo"
         shutil.copytree(ROOT, self.repo, ignore=shutil.ignore_patterns(".git", "feedback", "__pycache__"))
         self.target = self.home / ".agents/skills" / NAME
+        self.targets = [self.home / prefix / NAME for prefix in (
+            ".agents/skills", ".gemini/antigravity-cli/skills", ".gemini/config/skills",
+            ".claude/skills", ".codex/skills")]
         self.env = dict(os.environ, HOME=str(self.home), PYTHONDONTWRITEBYTECODE="1")
         bin_dir = self.home / "bin"
         bin_dir.mkdir()
@@ -43,7 +46,8 @@ class InstallTests(unittest.TestCase):
         self.assertEqual(len(list(backups.rglob("local-note.txt"))), 1)
         self.assert_ok(self.run_installer("--verify"))
         self.assert_ok(self.run_installer("--uninstall"))
-        self.assertFalse(self.target.exists())
+        for target in self.targets:
+            self.assertFalse(target.exists())
         self.assert_ok(self.run_installer("--uninstall"))
         self.assertTrue(list(backups.rglob("SKILL.md")))
 
@@ -60,7 +64,7 @@ class InstallTests(unittest.TestCase):
     def test_refuses_foreign_skill_on_update_and_uninstall(self):
         self.target.mkdir(parents=True)
         (self.target / "SKILL.md").write_text("---\nname: another-skill\n---\n")
-        for mode in ("--update", "--uninstall"):
+        for mode in ("--install", "--update", "--uninstall"):
             self.assertNotEqual(self.run_installer(mode).returncode, 0)
             self.assertIn("another-skill", (self.target / "SKILL.md").read_text())
 
@@ -98,6 +102,45 @@ class InstallTests(unittest.TestCase):
         self.assertNotEqual(self.run_installer("--update").returncode, 0)
         self.assertEqual((self.target / "local-note.txt").read_text(), "restore me")
         self.assertFalse(list(self.target.parent.glob(NAME + ".stage.*")))
+
+    def test_later_swap_failure_rolls_back_all_targets(self):
+        self.assert_ok(self.run_installer())
+        for target in self.targets:
+            (target / "local-note.txt").write_text(str(target))
+        mv = self.home / "bin/mv"
+        mv.write_text('#!/bin/sh\ncase "$1" in */.claude/*.stage.*) exit 1;; esac\n'
+                      + 'exec "' + shutil.which("mv") + '" "$@"\n')
+        mv.chmod(0o755)
+        self.assertNotEqual(self.run_installer("--update").returncode, 0)
+        for target in self.targets:
+            self.assertEqual((target / "local-note.txt").read_text(), str(target))
+
+    def test_body_name_is_not_ownership(self):
+        self.target.mkdir(parents=True)
+        (self.target / "SKILL.md").write_text("---\nname: other\n---\nname: " + NAME + "\n")
+        self.assertNotEqual(self.run_installer("--update").returncode, 0)
+
+    def test_verify_detects_changed_and_missing_files(self):
+        self.assert_ok(self.run_installer())
+        (self.target / "VERSION").write_text("wrong-version")
+        self.assertNotEqual(self.run_installer("--verify").returncode, 0)
+        (self.target / "SKILL.md").unlink()
+        self.assertNotEqual(self.run_installer("--verify").returncode, 0)
+
+    def test_prerequisite_links_and_dangling_link_guard(self):
+        prerequisite = self.home / ".agents/skills/grilling"
+        prerequisite.mkdir(parents=True)
+        (prerequisite / "SKILL.md").write_text("grilling")
+        self.assert_ok(self.run_installer())
+        for prefix in (".claude/skills", ".codex/skills", ".gemini/config/skills",
+                       ".gemini/antigravity-cli/skills"):
+            link = self.home / prefix / "grilling"
+            self.assertTrue(link.is_symlink())
+        link = self.home / ".codex/skills/grilling"
+        link.unlink()
+        link.symlink_to(self.home / "missing")
+        self.assertNotEqual(self.run_installer("--update").returncode, 0)
+        self.assertTrue(link.is_symlink())
 
 
 if __name__ == "__main__":

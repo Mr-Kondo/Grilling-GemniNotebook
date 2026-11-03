@@ -31,7 +31,7 @@ bash scripts/install.sh --verify
 python3 scripts/verify_skill.py --check-live-auth
 ```
 
-`--install`（省略時も同じ）と `--update` は同じ配布処理です。既存配置を退避してから交換し、失敗した配置は復旧します。退避先は `~/.local/state/grilling-gemini-notebook/backups/` に表示されます。独自変更のあるバックアップは保持し、不要と確認したものだけ削除してください。
+`--install`（省略時も同じ）と `--update` は同じ配布処理です。既存配置を退避してから交換し、途中失敗時は今回変更した全配置を復旧します。退避先は `~/.local/state/grilling-gemini-notebook/backups/` に表示されます。独自変更のあるバックアップは保持し、不要と確認したものだけ削除してください。
 
 アンインストールは `bash scripts/install.sh --uninstall`。このスキルの配置だけを退避して撤去し、前提のgrillingやnlmは残します。
 

@@ -28,6 +28,7 @@ GRILLING_LINKS=(
   "${HOME}/.gemini/antigravity-cli/skills/grilling"
   "${HOME}/.gemini/config/skills/grilling"
   "${HOME}/.codex/skills/grilling"
+  "${HOME}/.claude/skills/grilling"
 )
 
 SKILL_REL_FILES=(
@@ -93,7 +94,14 @@ fi
 # ADR: adr/2026-11-03-update-knowledge-layers.md. Never replace an unrelated skill.
 for target in "${TARGET_DIRS[@]}"; do
   if [[ -e "${target}" || -L "${target}" ]]; then
-    if [[ ! -f "${target}/SKILL.md" ]] || ! grep -Fxq "name: ${SKILL_NAME}" "${target}/SKILL.md"; then
+    if [[ ! -f "${target}/SKILL.md" ]] || ! python3 - "${target}/SKILL.md" "${SKILL_NAME}" <<'PY'
+import pathlib, re, sys
+text = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+frontmatter = re.match(r"\A---\r?\n(.*?)\r?\n---(?:\r?\n|\Z)", text, re.S)
+names = re.findall(r"^name:\s*([^\n]+)$", frontmatter[1], re.M) if frontmatter else []
+sys.exit(0 if len(names) == 1 and names[0].strip().strip("\"'") == sys.argv[2] else 1)
+PY
+    then
       echo "[FAIL] Refusing to replace unrecognized skill: ${target}" >&2
       exit 1
     fi
@@ -123,8 +131,44 @@ for rel in "${SKILL_REL_FILES[@]}"; do
   [[ -f "${ROOT}/${rel}" ]] || { echo "[FAIL] Missing source: ${rel}" >&2; exit 1; }
 done
 
+if [[ -f "${HOME}/.agents/skills/grilling/SKILL.md" ]]; then
+  for glink in "${GRILLING_LINKS[@]}"; do
+    if [[ -e "${glink}" || -L "${glink}" ]] && [[ ! -f "${glink}/SKILL.md" ]]; then
+      echo "[FAIL] Invalid prerequisite path (left untouched): ${glink}" >&2
+      exit 1
+    fi
+  done
+fi
+
 STAGE=""
-trap 'if [[ -n "${STAGE}" && -d "${STAGE}" ]]; then rm -rf "${STAGE}"; fi' EXIT
+CHANGED_TARGETS=()
+NEW_LINKS=()
+SUCCESS=0
+cleanup() {
+  local status=$?
+  trap - EXIT
+  if [[ "${SUCCESS}" -ne 1 ]]; then
+    local index target backup
+    for ((index=${#CHANGED_TARGETS[@]}-1; index>=0; index--)); do
+      target="${CHANGED_TARGETS[index]}"
+      backup="${BACKUP_ROOT}/$(echo "${target}" | tr '/' '_')"
+      rm -rf "${target}"
+      if [[ -e "${backup}" || -L "${backup}" ]]; then
+        if ! mv "${backup}" "${target}"; then
+          echo "[FAIL] Restore manually from ${backup} to ${target}" >&2
+          status=1
+        fi
+      fi
+    done
+    if [[ "${#NEW_LINKS[@]}" -gt 0 ]]; then
+      for glink in "${NEW_LINKS[@]}"; do rm -f "${glink}"; done
+    fi
+  fi
+  if [[ -n "${STAGE}" && -d "${STAGE}" ]]; then rm -rf "${STAGE}"; fi
+  exit "${status}"
+}
+trap cleanup EXIT
+trap 'exit 1' INT TERM
 
 for target in "${TARGET_DIRS[@]}"; do
   mkdir -p "$(dirname "${target}")"
@@ -134,25 +178,23 @@ for target in "${TARGET_DIRS[@]}"; do
     cp "${ROOT}/${rel}" "${STAGE}/${rel}"
   done
   chmod +x "${STAGE}/scripts/"*.py "${STAGE}/scripts/install.sh"
-  backup="${BACKUP_ROOT}/$(echo "${target}" | tr '/' '_')"
   if [[ -e "${target}" || -L "${target}" ]]; then
     backup_target "${target}"
   fi
-  if ! mv "${STAGE}" "${target}"; then
-    if [[ -e "${backup}" || -L "${backup}" ]]; then
-      mv "${backup}" "${target}"
-    fi
-    exit 1
-  fi
+  CHANGED_TARGETS+=("${target}")
+  mv "${STAGE}" "${target}"
   STAGE=""
 done
 
 if [[ -d "${HOME}/.agents/skills/grilling" ]]; then
   for glink in "${GRILLING_LINKS[@]}"; do
-    if [[ ! -e "${glink}" ]]; then
+    if [[ ! -e "${glink}" && ! -L "${glink}" ]]; then
+      mkdir -p "$(dirname "${glink}")"
       ln -s "${HOME}/.agents/skills/grilling" "${glink}"
+      NEW_LINKS+=("${glink}")
     fi
   done
 fi
 
 verify_install
+SUCCESS=1
