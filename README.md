@@ -24,6 +24,36 @@ Gemini Notebook（NotebookLM等）内の指定ファイル（またはファイ�
 
 ## インストール・更新・検証
 
+### `npx skills update` で管理する場合
+
+初回にGitHubの配布元を登録します（Node.js 22.20以降が必要）。既存の手動配置がある場合は、先に下記の移行手順で退避してください。
+
+```bash
+npx skills add Mr-Kondo/Grilling-GemniNotebook --skill grilling-gemini-notebook -g -a codex claude-code antigravity antigravity-cli -y
+npx skills update grilling-gemini-notebook -g
+```
+
+以後は `npx skills update` のGlobalを選んでも更新できます。引数なしでは他のスキルも更新対象になるため、このスキルだけなら上記の名前付きコマンドを使います。最新版はGitHubの既定ブランチであり、最新リリースタグへの固定ではありません。ローカルパスからの追加や下記の手動配置だけでは、GitHubからの更新管理に登録されません。
+
+CLIの標準配置は `~/.agents/skills/grilling-gemini-notebook` です。CLI 1.7.6ではCodex・Antigravity・Antigravity CLIはこの共通配置を使い、Claude Codeはシンボリックリンクで参照します。CLIはスキルのフォルダをコピーするため、このリポジトリでは公開済みの開発資料も含まれます。非公開の `feedback/` はGitで追跡・公開しません。`grilling` と `nlm` の前提条件は別途必要です。
+
+既存の手動配置から移行する場合は、ソースリポジトリで `bash scripts/install.sh --uninstall` を実行して既存5配置をバックアップし、上記の `skills add` を実行します。その後、旧配置パスを使う環境のため、次のリンクを作成します（同名のファイルが残る場合は上書きせず確認してください）。
+
+```bash
+mkdir -p "$HOME/.codex/skills" "$HOME/.gemini/config/skills" "$HOME/.gemini/antigravity-cli/skills" "$HOME/.gemini/antigravity/skills"
+ln -s "$HOME/.agents/skills/grilling-gemini-notebook" "$HOME/.codex/skills/grilling-gemini-notebook"
+ln -s "$HOME/.agents/skills/grilling-gemini-notebook" "$HOME/.gemini/config/skills/grilling-gemini-notebook"
+ln -s "$HOME/.agents/skills/grilling-gemini-notebook" "$HOME/.gemini/antigravity-cli/skills/grilling-gemini-notebook"
+ln -s "$HOME/.agents/skills/grilling-gemini-notebook" "$HOME/.gemini/antigravity/skills/grilling-gemini-notebook"
+python3 "$HOME/.agents/skills/grilling-gemini-notebook/scripts/verify_skill.py"
+```
+
+移行後は更新に `skills update` を使ってください。手動インストーラーの `--update` はリンクを独立したコピーに交換するため併用しません。CLI管理の削除は `npx skills remove grilling-gemini-notebook -g -y` で行い、上記の旧配置用リンクが残った場合はリンクだけを削除します。
+
+公式の[CLI仕様（インストール・更新）](https://github.com/vercel-labs/skills/blob/main/docs/commands.md)を参照してください。
+
+### 手動で配置する場合（従来方式）
+
 ```bash
 bash scripts/install.sh
 bash scripts/install.sh --update
@@ -33,7 +63,7 @@ python3 scripts/verify_skill.py --check-live-auth
 
 `--install`（省略時も同じ）と `--update` は同じ配布処理です。既存配置を退避してから交換し、途中失敗時は今回変更した全配置を復旧します。退避先は `~/.local/state/grilling-gemini-notebook/backups/` に表示されます。独自変更のあるバックアップは保持し、不要と確認したものだけ削除してください。
 
-アンインストールは `bash scripts/install.sh --uninstall`。このスキルの配置だけを退避して撤去し、前提のgrillingやnlmは残します。
+手動配置のアンインストールは `bash scripts/install.sh --uninstall`。このスキルの配置だけを退避して撤去し、前提のgrillingやnlmは残します。
 
 ## 更新管理（WikiSkillの考え方を限定採用）
 
